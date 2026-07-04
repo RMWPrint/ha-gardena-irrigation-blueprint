@@ -8,6 +8,7 @@ blueprint:
     Gedacht für Bewässerungen mit 1-6 Gardena Impulsregnern,
     Gardena Wasserverteiler und einem smarten Bewässerungsventil.
   domain: automation
+  author: Rudolf Walder
 
   input:
     automatik_helfer:
@@ -15,34 +16,30 @@ blueprint:
       description: Input Boolean, der die Bewässerungsautomatik aktiviert oder deaktiviert.
       selector:
         entity:
-          filter:
-            domain: input_boolean
+          domain: input_boolean
 
     sonnenaufgang_sensor:
       name: Sonnenaufgang-Sensor
       description: Sensor mit dem nächsten Sonnenaufgang als Datum/Uhrzeit.
       selector:
         entity:
-          filter:
-            domain: sensor
+          domain: sensor
 
     anzahl_durchlaeufe:
       name: Anzahl Durchläufe
       description: Input Number mit der Anzahl der aktiven Kreise/Regner.
       selector:
         entity:
-          filter:
-            domain: input_number
+          domain: input_number
 
     langprogramm:
       name: Langprogramm
       description: Input Select oder Input Number mit der Langprogramm-Dauer in Minuten.
       selector:
         entity:
-          filter:
-            domain:
-              - input_select
-              - input_number
+          domain:
+            - input_select
+            - input_number
 
     pause_minuten:
       name: Pause zwischen Durchläufen
@@ -61,13 +58,12 @@ blueprint:
       description: Script, das die eigentliche Wetterentscheidung und Bewässerung ausführt.
       selector:
         entity:
-          filter:
-            domain: script
+          domain: script
 
 mode: single
 
-triggers:
-  - trigger: time_pattern
+trigger:
+  - platform: time_pattern
     minutes: "/1"
 
 variables:
@@ -78,7 +74,7 @@ variables:
   pause_minuten: !input pause_minuten
   morgenlogik_script: !input morgenlogik_script
 
-conditions:
+condition:
   - condition: template
     value_template: >
       {{ states(automatik_helfer) == 'on' }}
@@ -99,111 +95,7 @@ conditions:
         {{ now_ts >= start and now_ts < start + 60 }}
       {% endif %}
 
-actions:
-  - action: script.turn_on
-    target:
-      entity_id: !input morgenlogik_scriptblueprint:
-  name: Rasenbewässerung - dynamischer Morgenstart vor Sonnenaufgang
-  description: >
-    Startet ein Morgenlogik-Script dynamisch vor Sonnenaufgang.
-    Die Startzeit wird anhand der Anzahl der Durchläufe, der eingestellten
-    Langprogramm-Dauer und der Pause zwischen den Durchläufen berechnet.
-
-    Gedacht für Bewässerungen mit 1-6 Gardena Impulsregnern,
-    Gardena Wasserverteiler und einem smarten Bewässerungsventil.
-  domain: automation
-
-  input:
-    automatik_helfer:
-      name: Automatik-Helfer
-      description: Input Boolean, der die Bewässerungsautomatik aktiviert oder deaktiviert.
-      selector:
-        entity:
-          filter:
-            domain: input_boolean
-
-    sonnenaufgang_sensor:
-      name: Sonnenaufgang-Sensor
-      description: Sensor mit dem nächsten Sonnenaufgang als Datum/Uhrzeit.
-      selector:
-        entity:
-          filter:
-            domain: sensor
-
-    anzahl_durchlaeufe:
-      name: Anzahl Durchläufe
-      description: Input Number mit der Anzahl der aktiven Kreise/Regner.
-      selector:
-        entity:
-          filter:
-            domain: input_number
-
-    langprogramm:
-      name: Langprogramm
-      description: Input Select oder Input Number mit der Langprogramm-Dauer in Minuten.
-      selector:
-        entity:
-          filter:
-            domain:
-              - input_select
-              - input_number
-
-    pause_minuten:
-      name: Pause zwischen Durchläufen
-      description: Pause in Minuten, z. B. 5 Minuten für den Gardena Wasserverteiler.
-      default: 5
-      selector:
-        number:
-          min: 0
-          max: 20
-          step: 1
-          unit_of_measurement: min
-          mode: slider
-
-    morgenlogik_script:
-      name: Morgenlogik-Script
-      description: Script, das die eigentliche Wetterentscheidung und Bewässerung ausführt.
-      selector:
-        entity:
-          filter:
-            domain: script
-
-mode: single
-
-triggers:
-  - trigger: time_pattern
-    minutes: "/1"
-
-variables:
-  automatik_helfer: !input automatik_helfer
-  sonnenaufgang_sensor: !input sonnenaufgang_sensor
-  anzahl_durchlaeufe: !input anzahl_durchlaeufe
-  langprogramm: !input langprogramm
-  pause_minuten: !input pause_minuten
-  morgenlogik_script: !input morgenlogik_script
-
-conditions:
-  - condition: template
-    value_template: >
-      {{ states(automatik_helfer) == 'on' }}
-
-  - condition: template
-    value_template: >
-      {% set sr = states(sonnenaufgang_sensor) %}
-      {% if sr in ['unknown', 'unavailable', 'none'] %}
-        false
-      {% else %}
-        {% set durchlaeufe = states(anzahl_durchlaeufe) | int(1) %}
-        {% set lang = states(langprogramm) | int(50) %}
-        {% set pause = pause_minuten | int(5) %}
-        {% set dauer_min = (durchlaeufe * lang) + ((durchlaeufe - 1) * pause) %}
-        {% set sunrise = as_timestamp(sr) %}
-        {% set start = sunrise - (dauer_min * 60) %}
-        {% set now_ts = as_timestamp(now()) %}
-        {{ now_ts >= start and now_ts < start + 60 }}
-      {% endif %}
-
-actions:
-  - action: script.turn_on
+action:
+  - service: script.turn_on
     target:
       entity_id: !input morgenlogik_script
